@@ -1,0 +1,59 @@
+:root {
+  --timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  --bg-color: #333333;
+  --main-color: rgb(223, 223, 223);
+  --inv-main-color: rgb(63, 63, 63);
+  --active-bg-color: #444444;
+  --animation-duration: 250ms;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    'Open Sans', 'Helvetica Neue', sans-serif;
+  background-image: url(../images/main-back.png);
+  color: var(--main-color);
+  transition: color 150ms var(--timing-function), background-color 150ms var(--timing-function);
+  background-color: rgb(16, 48, 70);
+  background-repeat: repeat-x;
+  background-position: 50% 20%;
+  background-size: 500px;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+ul {
+  list-style: none;
+  margin: 0px;
+  padding: 0px;
+}
+
+a {
+  text-decoration: none;
+  display: block;
+}
+
+p {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+.title {
+  text-align: center;
+  font-family: Allison, sans-serif;
+  font-weight: 700;
+  font-size: 70px;
+  padding-top: 24px;
+  padding-bottom: 20px;
+  color: #ffffff;
+}
