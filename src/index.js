@@ -1,55 +1,164 @@
-import { throttle } from 'throttle-debounce';
 import './sass/main.scss';
-import '@pnotify/core/dist/Angeler.css';
-import LoadMoreBtn from './js/load-more-btn';
-import { pN } from './js/pnotify-set';
-import ImagesApiService from './js/api-img-service';
-import { onSearch, fetchAndRenderImages } from './js/search-render';
-import {
-  openModalClick,
-  closeModalOn,
-  onModalImageTurn,
-  onCloseModalOverlay,
-  onKeyPress,
-} from './js/modal-service';
-import {
-  toTop,
-  scrollWatch,
-  orientationValue,
-  imgTypeValue,
-  infiniteScrollValue,
-  resetAll,
-} from './js/utils';
-import { refs } from './js/refs';
+import '../node_modules/@pnotify/core/BrightTheme.css';
+import fetchImages from '../src/js/apiService'
+import cardTemplate from '../src/templates/cardTemplate';
+import * as basicLightbox from 'basiclightbox';
+import {error, notice } from '../node_modules/@pnotify/core/dist/PNotify.js';
 
-export const imagesApiService = new ImagesApiService();
-export const loadMoreBtn = new LoadMoreBtn({
-  selector: '[data-action="load-more"]',
-  hidden: true,
+
+import throttle from 'lodash.throttle';
+  
+
+const refs = {
+    form: document.querySelector('#search-form'),
+    target: document.querySelector('.gallery'),
+    buttonMore: document.querySelector('.more_button'),
+    upButton: document.querySelector('.up_button'),
+    intersector: document.querySelector('#intersector')
+   
+};
+
+let pageNumber = null;
+let markup = '';
+let searchQuery = '';
+
+refs.form.addEventListener('submit', onFormSubmit)
+// refs.buttonMore.addEventListener('click', debounce(onMoreButtonclick, 300))
+refs.target.addEventListener('click',OnImgClick)
+refs.upButton.addEventListener('click', scrollToTop)
+window.addEventListener('scroll', throttle(trackScroll), 100);
+
+
+function trackScroll() {
+          let scrolled = window.pageYOffset;
+          let coords = document.documentElement.clientHeight;
+      
+          if (scrolled > coords) {
+            refs.upButton.classList.add('isActive');
+          }
+          if (scrolled < coords) {
+            refs.upButton.classList.remove('isActive');
+          }
+        }
+
+function scrollToTop() {
+refs.upButton.classList.remove('isActive');
+  refs.form.scrollIntoView({
+  behavior: 'smooth',
+  block: 'end',
+})
+}
+
+
+function OnImgClick(e) {
+    if (e.target.nodeName !== "IMG") return;
+
+    const imgURL = e.target.dataset.largeimg;
+    basicLightbox.create(`<div class="modal">
+		<img width="1200" src="${imgURL}">
+        </div>
+	`).show()
+   
+    
+}
+
+
+function onFormSubmit(e) {
+    
+    pageNumber = 1;
+    refs.target.innerHTML = '';
+    // refs.buttonMore.classList.remove('isActive')
+    e.preventDefault();
+    const form = e.currentTarget;
+    searchQuery = form.elements.query.value;   
+   
+
+    if (!searchQuery.trim()) {
+        error({
+        title: 'Enter valid query.',
+            text: 'Please check you spelling',
+    delay: 3000
+  });
+       return; 
+    }
+    else {
+        fetchImages(searchQuery.trim(), pageNumber)
+            .then((result) => {
+                if (result.hits.length > 0) {
+
+notice({
+        title: 'Success!',
+            text: `Found more than ${result.total} results`,
+    delay: 3000
+  });
+                    
+                    createMarkup(result);
+                    pageNumber += 1;
+                    form.reset();
+                    setTimeout(hideKeyboard(), 100);
+                    
+                    // refs.buttonMore.classList.add('isActive')
+                } else {
+                         error({
+        title: 'Nothing is found.',
+            text: 'Please check you spelling',
+    delay: 3000
+  });
+                }
+            })
+    .catch(error => console.log(error)) 
+    }   
+    
+}
+  
+// function onMoreButtonclick(e) {
+//     // e.preventDefault();
+//     fetchImages(searchQuery.trim(), pageNumber)
+//             .then((result) => {
+//                 createMarkup(result);
+//                 pageNumber +=1;
+// refs.buttonMore.scrollIntoView({
+//   behavior: 'smooth',
+//   block: 'end',
+// });
+                
+//             })
+//     .catch(error => console.log(error)) 
+// }
+
+function hideKeyboard() {
+    
+    document.querySelector('[name="query"]').blur();
+    
+}
+function createMarkup(data) {
+
+    markup = cardTemplate(data);
+    refs.target.insertAdjacentHTML('beforeend', markup)
+    
+}
+
+const onEntry = entries => {
+    entries.forEach(entry => {
+
+        if (entry.isIntersecting && searchQuery !== '') {
+            // refs.upButton.classList.add('isActive')
+            if (pageNumber === 1) {
+                pageNumber = 2; //Это костыль чтоб обсервер не выводил дважды страницу 1 при смене запроса
+            }
+            
+            fetchImages(searchQuery.trim(), pageNumber)
+            .then((result) => {
+                createMarkup(result);
+                pageNumber +=1;                
+            })
+    .catch(error => console.log(error))
+        } 
+    });
+};
+const observer = new IntersectionObserver(onEntry, {
+  rootMargin: '180px',
 });
+observer.observe(refs.intersector);
 
-window.addEventListener(
-  'scroll',
-  throttle(500, e => scrollWatch(refs)),
-);
-window.addEventListener('keydown', e => onKeyPress(e, refs));
-refs.modalImage.addEventListener(
-  'mousemove',
-  throttle(500, e => (refs.xMousePosition = e.clientX)),
-);
-refs.modalImage.addEventListener('click', () => onModalImageTurn(refs));
-refs.btnReset.addEventListener('click', () => resetAll(refs));
-refs.doneBtn.addEventListener('click', () => resetAll(refs));
-refs.searchForm.addEventListener('submit', e => onSearch(e, refs, pN));
-loadMoreBtn.refs.button.addEventListener('click', () =>
-  fetchAndRenderImages(refs, pN),
-);
-refs.imgList.addEventListener('click', e => openModalClick(e, refs));
-refs.modalCloser.addEventListener('click', () => closeModalOn(refs));
-refs.modalOverlay.addEventListener('click', e => onCloseModalOverlay(e, refs));
-refs.toTopBtn.addEventListener('click', () => toTop(refs));
-refs.formOrientation.addEventListener('input', () => orientationValue(refs));
-refs.formImgType.addEventListener('input', () => imgTypeValue(refs));
-refs.formInfiniteScroll.addEventListener('input', () =>
-  infiniteScrollValue(refs),
-);
+
